@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carbon Awareness Dashboard</title>
+    <style>
+        body { margin: 0; background-color: #0b0c10; color: #c5a059; font-family: 'Segoe UI', sans-serif; display: flex; }
+        #sidebar { width: 350px; padding: 40px; background: #1f2833; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px; box-shadow: 5px 0 15px rgba(0,0,0,0.5); z-index: 10; }
+        h2 { margin-top: 0; color: #fff; letter-spacing: 1px; text-transform: uppercase; font-size: 1.2rem;}
+        input, select, button { width: 100%; padding: 12px; margin-top: 5px; background: #0b0c10; border: 1px solid #45f3ff; color: #fff; border-radius: 4px; box-sizing: border-box; }
+        button { background: #45f3ff; color: #0b0c10; font-weight: bold; cursor: pointer; border: none; transition: 0.3s; }
+        button:hover { background: #c5a059; }
+        #canvas-container { flex-grow: 1; height: 100vh; position: relative; }
+        #score-display { position: absolute; top: 40px; right: 40px; background: rgba(31, 40, 51, 0.8); padding: 20px 40px; border-radius: 8px; border: 1px solid #45f3ff; text-align: center; }
+        #score-display span { display: block; font-size: 2.5rem; font-weight: bold; color: #45f3ff; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="sidebar">
+        <h2>Carbon Track</h2>
+        <form id="carbonForm">
+            <label>Daily Driving (Miles):
+                <input type="number" id="miles" value="10" required>
+            </label>
+            <br><br>
+            <label>Electricity Usage (kWh):
+                <input type="number" id="kwh" value="5" required>
+            </label>
+            <br><br>
+            <label>Diet Type:
+                <select id="diet">
+                    <option value="omnivore">Omnivore</option>
+                    <option value="vegetarian">Vegetarian</option>
+                    <option value="vegan">Vegan</option>
+                </select>
+            </label>
+            <br><br>
+            <button type="submit">Calculate Footprint</button>
+        </form>
+    </div>
+
+    <div id="canvas-container">
+        <div id="score-display">
+            Your Carbon Impact
+            <span id="score-val">6.54</span> kg CO2
+        </div>
+    </div>
+
+    <script>
+        // --- THREE.JS 3D SCENE SETUP ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+
+        // Create a stylized, glowing "Carbon Orb" using particles
+        const geometry = new THREE.SphereGeometry(2, 32, 32);
+        const material = new THREE.PointsMaterial({ color: 0x45f3ff, size: 0.05 });
+        const carbonSphere = new THREE.Points(geometry, material);
+        scene.add(carbonSphere);
+
+        camera.position.z = 5;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            carbonSphere.rotation.x += 0.005;
+            carbonSphere.rotation.y += 0.005;
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+
+        // --- FORM LOGIC & REACTIVE INTERACTION ---
+        document.getElementById('carbonForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const miles = parseFloat(document.getElementById('miles').value);
+            const kwh = parseFloat(document.getElementById('kwh').value);
+            const diet = document.getElementById('diet').value;
+
+            // Frontend calculation replica for instant 3D feedback
+            const co2 = (miles * 0.404) + (kwh * 0.385) + (diet === 'omnivore' ? 2.5 : (diet === 'vegetarian' ? 1.7 : 1.1));
+            document.getElementById('score-val').innerText = co2.toFixed(2);
+
+            // Scale the 3D carbon cloud based on the score intensity
+            const scaleFactor = Math.max(0.5, co2 / 5);
+            carbonSphere.scale.set(scaleFactor, scaleFactor, scaleFactor);
+            
+            // Shift color to a warn tone if footprint is heavy
+            if (co2 > 10) {
+                carbonSphere.material.color.setHex(0xc5a059); // Amber alert color
+            } else {
+                carbonSphere.material.color.setHex(0x45f3ff); // Safe neon blue
+            }
+        });
+    </script>
+</body>
+</html>
