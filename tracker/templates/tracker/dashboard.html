@@ -1,28 +1,103 @@
-<nav id="sidebar" aria-label="Main Navigation">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carbon Awareness Dashboard</title>
+    <style>
+        body { margin: 0; background-color: #0b0c10; color: #c5a059; font-family: 'Segoe UI', sans-serif; display: flex; }
+        #sidebar { width: 350px; padding: 40px; background: #1f2833; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px; box-shadow: 5px 0 15px rgba(0,0,0,0.5); z-index: 10; }
+        h2 { margin-top: 0; color: #fff; letter-spacing: 1px; text-transform: uppercase; font-size: 1.2rem;}
+        input, select, button { width: 100%; padding: 12px; margin-top: 5px; background: #0b0c10; border: 1px solid #45f3ff; color: #fff; border-radius: 4px; box-sizing: border-box; }
+        button { background: #45f3ff; color: #0b0c10; font-weight: bold; cursor: pointer; border: none; transition: 0.3s; }
+        button:hover { background: #c5a059; }
+        #canvas-container { flex-grow: 1; height: 100vh; position: relative; }
+        #score-display { position: absolute; top: 40px; right: 40px; background: rgba(31, 40, 51, 0.8); padding: 20px 40px; border-radius: 8px; border: 1px solid #45f3ff; text-align: center; }
+        #score-display span { display: block; font-size: 2.5rem; font-weight: bold; color: #45f3ff; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <nav id="sidebar" aria-label="Main Navigation">
         <h2>Carbon Track</h2>
         <form id="carbonForm" method="POST" action="{% url 'dashboard' %}">
             {% csrf_token %}
             <label for="miles">Daily Driving (Miles):
-                <input type="number" id="miles" name="miles" value="10" required aria-required="true" aria-label="Miles driven today">
+                <input type="number" id="miles" name="miles" value="{{ request.POST.miles|default:10 }}" required aria-required="true" aria-label="Miles driven today">
             </label>
             <br><br>
             <label for="kwh">Electricity Usage (kWh):
-                <input type="number" id="kwh" name="kwh" value="5" required aria-required="true" aria-label="Kilowatt hours used">
+                <input type="number" id="kwh" name="kwh" value="{{ request.POST.kwh|default:5 }}" required aria-required="true" aria-label="Kilowatt hours used">
             </label>
             <br><br>
             <label for="diet">Diet Type:
                 <select id="diet" name="diet" aria-label="Dietary preference">
-                    <option value="omnivore">Omnivore</option>
-                    <option value="vegetarian">Vegetarian</option>
-                    <option value="vegan">Vegan</option>
+                    <option value="omnivore" {% if request.POST.diet == 'omnivore' %}selected{% endif %}>Omnivore</option>
+                    <option value="vegetarian" {% if request.POST.diet == 'vegetarian' %}selected{% endif %}>Vegetarian</option>
+                    <option value="vegan" {% if request.POST.diet == 'vegan' %}selected{% endif %}>Vegan</option>
                 </select>
             </label>
             <br><br>
             <button type="submit" aria-label="Calculate your carbon footprint">Calculate Footprint</button>
         </form>
-        
+
         <div style="margin-top: 20px; padding: 15px; background: #0b0c10; border-left: 4px solid #c5a059; border-radius: 4px;">
             <strong style="color: #c5a059;">Insight:</strong><br>
-            <p style="font-size: 0.9rem; line-height: 1.4;">{{ insight|default:"Enter your daily data to see your impact." }}</p>
+            <p style="font-size: 0.9rem; line-height: 1.4; color: #fff;">{{ insight|default:"Enter your daily data to see your impact." }}</p>
         </div>
     </nav>
+
+    <div id="canvas-container">
+        <div id="score-display">
+            Your Carbon Impact
+            <span id="score-val">{{ score|default:"6.54" }}</span> kg CO2
+        </div>
+    </div>
+
+    <script>
+        // --- THREE.JS 3D SCENE SETUP ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+
+        // Create a stylized, glowing "Carbon Orb" using particles
+        const geometry = new THREE.SphereGeometry(2, 32, 32);
+        const material = new THREE.PointsMaterial({ color: 0x45f3ff, size: 0.05 });
+        const carbonSphere = new THREE.Points(geometry, material);
+        scene.add(carbonSphere);
+
+        camera.position.z = 5;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            carbonSphere.rotation.x += 0.005;
+            carbonSphere.rotation.y += 0.005;
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+
+        // --- REACTIVE INTERACTION ON LOAD ---
+        // Grab the score calculated by the Django backend
+        const scoreText = document.getElementById('score-val').innerText;
+        const co2 = parseFloat(scoreText) || 6.54;
+
+        // Scale the 3D carbon cloud based on the score intensity
+        const scaleFactor = Math.max(0.5, co2 / 5);
+        carbonSphere.scale.set(scaleFactor, scaleFactor, scaleFactor);
+
+        // Shift color to a warn tone if footprint is heavy
+        if (co2 > 10) {
+            carbonSphere.material.color.setHex(0xc5a059); // Amber alert color
+        } else {
+            carbonSphere.material.
