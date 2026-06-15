@@ -26,6 +26,9 @@ SECRET_KEY = 'django-insecure-4mgsgiyj$zdb9ch3w2#0)b_fx3$9kp3$4iai-quvmgw=!3#eb3
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
+CSRF_TRUSTED_ORIGINS = [
+    'https://carbon-platform-submission-production.up.railway.app',
+]
 
 
 # Application definition
