@@ -20,4 +20,4 @@ class CarbonTrackerTests(TestCase):
         """Test if the dashboard loads with correct accessibility and status."""
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'dashboard.html')
+        self.assertTemplateUsed(response, 'tracker/dashboard.html')
