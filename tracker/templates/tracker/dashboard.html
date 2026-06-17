@@ -123,3 +123,250 @@
         }
 
         button {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+            color: #000;
+            border: none;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 16px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 242, 254, 0.4);
+        }
+
+        /* AI Insight Box */
+        .insight-box {
+            margin-top: auto;
+            border-left: 4px solid var(--primary);
+            background: rgba(0, 242, 254, 0.05);
+        }
+
+        .insight-box h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .insight-box p {
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #cbd5e0;
+        }
+
+        /* Right Side: Visuals */
+        .visual-section {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            pointer-events: none; /* Lets clicks pass through to 3D canvas if needed */
+        }
+
+        .score-card {
+            text-align: right;
+            padding: 30px 40px;
+            min-width: 250px;
+        }
+
+        .score-card h2 {
+            margin: 0;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #a0aec0;
+        }
+
+        .score-value {
+            font-size: 64px;
+            font-weight: 800;
+            margin: 10px 0;
+            line-height: 1;
+            color: var(--primary);
+            text-shadow: 0 0 20px rgba(0, 242, 254, 0.5);
+            transition: color 0.5s ease;
+        }
+
+        .score-unit {
+            font-size: 16px;
+            color: #718096;
+            font-weight: 600;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div class="dashboard-wrapper">
+        
+        <div class="glass-panel controls-section">
+            <div class="header">
+                <h1>Carbon Track</h1>
+                <p>Environmental Impact Analyzer</p>
+            </div>
+
+            <form method="POST" action="{% url 'dashboard' %}">
+                {% csrf_token %}
+                
+                <div class="input-group">
+                    <label for="miles">Daily Driving (Miles)</label>
+                    <input type="number" id="miles" name="miles" value="{{ request.POST.miles|default:10 }}" required min="0">
+                </div>
+
+                <div class="input-group">
+                    <label for="kwh">Electricity Usage (kWh)</label>
+                    <input type="number" id="kwh" name="kwh" value="{{ request.POST.kwh|default:5 }}" required min="0">
+                </div>
+
+                <div class="input-group">
+                    <label for="diet">Dietary Lifestyle</label>
+                    <select id="diet" name="diet">
+                        <option value="omnivore" {% if request.POST.diet == 'omnivore' %}selected{% endif %}>Omnivore (High Impact)</option>
+                        <option value="vegetarian" {% if request.POST.diet == 'vegetarian' %}selected{% endif %}>Vegetarian (Medium Impact)</option>
+                        <option value="vegan" {% if request.POST.diet == 'vegan' %}selected{% endif %}>Vegan (Low Impact)</option>
+                    </select>
+                </div>
+
+                <button type="submit">Analyze Footprint</button>
+            </form>
+
+            <div class="glass-panel insight-box" id="dynamic-insight">
+                <h3>AI Insight</h3>
+                <p>{{ insight|default:"Awaiting data input to generate personalized reduction strategies." }}</p>
+            </div>
+        </div>
+
+        <div class="visual-section">
+            <div class="glass-panel score-card">
+                <h2>Total Footprint</h2>
+                <div class="score-value" id="score-val">{{ score|default:"0.00" }}</div>
+                <div class="score-unit">kg CO₂e / day</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const container = document.getElementById('canvas-container');
+        const scoreElement = document.getElementById('score-val');
+        const insightBox = document.getElementById('dynamic-insight');
+        
+        // Setup Three.js Scene
+        const scene = new THREE.Scene();
+        // Shift camera slightly to the right to balance the left sidebar
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 8;
+        camera.position.x = -2;
+
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        // Create a complex "Carbon Hologram" using Torus Knot
+        const geometry = new THREE.TorusKnotGeometry(2, 0.6, 128, 64);
+        
+        // Wireframe material for a tech/hologram look
+        const material = new THREE.MeshBasicMaterial({ 
+            color: 0x00f2fe, 
+            wireframe: true,
+            transparent: true,
+            opacity: 0.3
+        });
+        
+        const torusKnot = new THREE.Mesh(geometry, material);
+        scene.add(torusKnot);
+
+        // Add floating particles around it
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particlesCount = 1000;
+        const posArray = new Float32Array(particlesCount * 3);
+        
+        for(let i = 0; i < particlesCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 15;
+        }
+        
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const particlesMaterial = new THREE.PointsMaterial({
+            size: 0.02,
+            color: 0x00f2fe,
+            transparent: true,
+            opacity: 0.5
+        });
+        
+        const particleMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particleMesh);
+
+        // Animation Loop
+        let clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const elapsedTime = clock.getElapsedTime();
+
+            // Rotate objects
+            torusKnot.rotation.y += 0.005;
+            torusKnot.rotation.x += 0.002;
+            particleMesh.rotation.y = -elapsedTime * 0.05;
+
+            // Make the knot "breathe"
+            const scale = Math.sin(elapsedTime * 2) * 0.05 + 1;
+            torusKnot.scale.set(scale, scale, scale);
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Handle Window Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Reactive Color & State Logic based on Score
+        const currentScore = parseFloat(scoreElement.innerText) || 0;
+        
+        if (currentScore > 0) {
+            // Adjust colors based on footprint severity
+            let targetColor = 0x00f2fe; // Safe Blue
+            let cssColor = '#00f2fe';
+
+            if (currentScore > 20) {
+                targetColor = 0xff0844; // Danger Red
+                cssColor = '#ff0844';
+                insightBox.style.borderLeftColor = cssColor;
+                document.querySelector('.insight-box h3').style.color = cssColor;
+            } else if (currentScore > 10) {
+                targetColor = 0xf6d365; // Warning Yellow
+                cssColor = '#f6d365';
+                insightBox.style.borderLeftColor = cssColor;
+                document.querySelector('.insight-box h3').style.color = cssColor;
+            }
+
+            // Apply colors to 3D objects and DOM
+            material.color.setHex(targetColor);
+            particlesMaterial.color.setHex(targetColor);
+            scoreElement.style.color = cssColor;
+            scoreElement.style.textShadow = `0 0 20px ${cssColor}80`;
+
+            // Make the 3D object spin faster and grow larger if score is high
+            const sizeMultiplier = Math.min(1.5, Math.max(0.8, currentScore / 15));
+            torusKnot.scale.set(sizeMultiplier, sizeMultiplier, sizeMultiplier);
+        }
+    </script>
+</body>
+</html>
