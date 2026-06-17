@@ -26,4 +26,4 @@ def dashboard(request):
         context['score'] = round(log.total_score, 2)
         context['insight'] = insight
 
-    return render(request, 'dashboard.html', context)
+    return render(request, 'tracker/dashboard.html', context)
